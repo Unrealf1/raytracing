@@ -6,6 +6,8 @@
 #include <iostream>
 #include "LiteMath.h"
 #include "render/CrossRT.h"
+#include "Light.h"
+#include "../../render/scene_mgr.h"
 
 class RayTracer
 {
@@ -14,10 +16,13 @@ public:
 
   void UpdateView(const LiteMath::float3& a_camPos, const LiteMath::float4x4& a_invProjView ) { m_camPos = to_float4(a_camPos, 1.0f); m_invProjView = a_invProjView; }
   void SetScene(std::shared_ptr<ISceneObject> a_pAccelStruct) { m_pAccelStruct = a_pAccelStruct; };
+  void SetSceneManager(std::shared_ptr<SceneManager> scene_manager) { m_scene_manager = std::move(scene_manager); };
 
   void CastSingleRay(uint32_t tidX, uint32_t tidY, uint32_t* out_color);
   void kernel_InitEyeRay(uint32_t tidX, uint32_t tidY, LiteMath::float4* rayPosAndNear, LiteMath::float4* rayDirAndFar);
   void kernel_RayTrace(uint32_t tidX, uint32_t tidY, const LiteMath::float4* rayPosAndNear, const LiteMath::float4* rayDirAndFar, uint32_t* out_color);
+
+  void AddLight(std::shared_ptr<LightInfo> light) { m_lights.push_back(light); }
 
 protected:
   uint32_t m_width;
@@ -27,6 +32,8 @@ protected:
   LiteMath::float4x4 m_invProjView;
 
   std::shared_ptr<ISceneObject> m_pAccelStruct;
+  std::vector<std::shared_ptr<LightInfo>> m_lights;
+  std::shared_ptr<SceneManager> m_scene_manager;
 
   static constexpr uint32_t palette_size = 20;
   // color palette to select color for objects based on mesh/instance id
@@ -37,6 +44,11 @@ protected:
     0xffaa6e28, 0xfffffac8, 0xff800000, 0xffaaffc3,
     0xff808000, 0xffffd8b1, 0xff000080, 0xff808080
   };
+
+
+  const MaterialData_pbrMR& get_material_data(const CRT_Hit& hit);
+  // returns color
+  float3 trace(float4 rayPos, float4 rayDir, float3 background_color={0.0f, 0.0f, 0.0f});
 };
 
 #endif// VK_GRAPHICS_RT_RAYTRACING_H

@@ -84,6 +84,7 @@ void SimpleRender::RayTraceCPU()
   {
     m_pRayTracerCPU = std::make_unique<RayTracer>(m_width, m_height);
     m_pRayTracerCPU->SetScene(m_pAccelStruct);
+    m_pRayTracerCPU->SetSceneManager(m_pScnMgr);
   }
 
   m_pRayTracerCPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix);
