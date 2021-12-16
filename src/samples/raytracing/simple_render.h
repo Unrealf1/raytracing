@@ -19,6 +19,8 @@
 #include "raytracing.h"
 #include "raytracing_generated.h"
 
+#include "Light.h"
+
 enum class RenderMode
 {
   RASTERIZATION,
@@ -117,6 +119,7 @@ protected:
   } pushConst2M;
 
   UniformParams m_uniforms {};
+  std::unique_ptr<LightInfo> m_light_info;
   VkBuffer m_ubo = VK_NULL_HANDLE;
   VkDeviceMemory m_uboAlloc = VK_NULL_HANDLE;
   void* m_uboMappedMem = nullptr;

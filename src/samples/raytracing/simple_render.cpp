@@ -112,7 +112,7 @@ void SimpleRender::InitVulkan(const char** a_instanceExtensions, uint32_t a_inst
 
   LoaderConfig conf = {};
   conf.load_geometry = true;
-  conf.load_materials = MATERIAL_LOAD_MODE::NONE;
+  conf.load_materials = MATERIAL_LOAD_MODE::MATERIALS_ONLY;
   if(ENABLE_HARDWARE_RT)
   {
     conf.build_acc_structs = true;
@@ -466,6 +466,9 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
+  //TODO: move somewhere else?
+  m_light_info = std::make_unique<PointLight>(float3{1.0f, 0.0f, 0.0f}, float3{0.0f, 0.0f, 0.0f});
+
   m_pScnMgr->LoadScene(path);
   if(ENABLE_HARDWARE_RT)
   {
@@ -691,6 +694,8 @@ void SimpleRender::SetupGUIElements()
 
     ImGui::ColorEdit3("Meshes base color", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
     ImGui::SliderFloat3("Light source position", m_uniforms.lightPos.M, -10.f, 10.f);
+    //auto ptr = m_light_info->get();
+    //static_cast<PointLight*>(ptr)->m_position = m_uni
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 

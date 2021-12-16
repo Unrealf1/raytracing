@@ -50,7 +50,12 @@ const MaterialData_pbrMR& RayTracer::get_material_data(const CRT_Hit& hit) {
     // indexoffset / 3 -> оффсет для всех примитивов данного меша
     // primitiveid -> 
     // meshbuffer[]
-    return {};
+    if (m_scene_manager->m_materials.empty()) {
+        static MaterialData_pbrMR fake_material = {};
+        return fake_material;
+    }
+
+    return m_scene_manager->m_materials.back();
 }
 
 static uint32_t create_color(uint8_t red, uint8_t green, uint8_t blue) {
@@ -70,19 +75,80 @@ static float3 mix_colors(float3 first, float3 second, float alpha) {
     return first * alpha + second * (1.0f - alpha);
 }
 
-//TODO
+//TODO: test
 static float3 destruct_color(uint32_t color) {
-    return {};
+    uint8_t r = 0x00ff0000 & color;
+    uint8_t g = 0x0000ff00 & color;
+    uint8_t b = 0x000000ff & color;
+    return float3{r, g, b} / 256.0f;
+}
+
+static float3 PhongShading(
+    float3 normal, 
+    float3 dir_to_light, 
+    float a, 
+    float s, 
+    float d,
+    float3 base_color,
+    float3 light_color
+) {
+   //TODO: add specular
+   return a * base_color + d * dot(normal, dir_to_light);
 }
 
 //TODO
-static float3 calc_light_impact(float3 light_color) {
+static float3 calc_light_impact(
+    float3 light_color,
+    float3 dir_to_light,
+    const MaterialData_pbrMR& material,
+    float3 normal,
+    float3 base_color
+) {
+    return PhongShading(normal, dir_to_light, 0.5f, material.metallic, 0.2f, base_color, light_color);
     return light_color;
 }
 
-//TODO
-static float4 get_normal_from_hit(const CRT_Hit& hit) {
-    return {};
+// from "resources/shaders/unpack_attributes.h"
+float3 DecodeNormal(uint32_t a_data)
+{
+  const uint32_t a_enc_x = (a_data  & 0x0000FFFFu);
+  const uint32_t a_enc_y = ((a_data & 0xFFFF0000u) >> 16);
+  const float sign   = (a_enc_x & 0x0001u) != 0 ? -1.0f : 1.0f;
+
+  const int usX = int(a_enc_x & 0x0000FFFEu);
+  const int usY = int(a_enc_y & 0x0000FFFFu);
+
+  const int sX  = (usX <= 32767) ? usX : usX - 65536;
+  const int sY  = (usY <= 32767) ? usY : usY - 65536;
+
+  const float x = sX*(1.0f / 32767.0f);
+  const float y = sY*(1.0f / 32767.0f);
+  const float z = sign*sqrt(max(1.0f - x*x - y*y, 0.0f));
+
+  return float3(x, y, z);
+}
+
+
+//TODO: test
+float3 RayTracer::get_normal_from_hit(const CRT_Hit& hit) {
+    using namespace LiteMath;
+    const auto& mesh_info = m_scene_manager->GetMeshInfo(hit.geomId);
+
+    auto mesh_data = m_scene_manager->GetMeshData();
+    auto offset = 3 * hit.primId + mesh_info.m_indexOffset;
+
+    float3 final_normal = {0.0f, 0.0f, 0.0f};
+
+    for (size_t i = 0; i < 3; ++i) {
+        uint32_t ii = mesh_data->IndexData()[offset + i];
+        float* v = &(mesh_data->VertexData()[(mesh_info.m_vertexOffset + ii) * 8]);
+        float3 normal = DecodeNormal(v[3]);
+        final_normal += normal * hit.coords[3 - i];   
+    }
+    auto instance_matrix = m_scene_manager->GetInstanceMatrix(hit.instId);
+    float3 normal = normalize(to_float3(transpose(inverse4x4(instance_matrix)) * to_float4(final_normal, 0.0f)));
+
+    return normal;
 }
 
 float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color) {
@@ -92,9 +158,10 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color) {
         return background_color;
     }
 
-    auto normal = get_normal_from_hit(hit);
+    auto normal = LiteMath::to_float4(get_normal_from_hit(hit), 0.0f);
     auto material = get_material_data(hit);
-    auto result_color = destruct_color(m_palette[hit.instId % palette_size]);
+    auto result_color = LiteMath::float3{0.0f, 0.0f, 0.0f};
+    auto base_color = destruct_color(m_palette[hit.instId % palette_size]);
     LiteMath::float4 hit_point = rayPos + rayDir * hit.t;
     auto hit_point_3 = LiteMath::to_float3(hit_point);
     for (auto& light : m_lights) {
@@ -105,7 +172,7 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color) {
         // dist to directional is always at inf distance
         if (light_hit.instId == uint32_t(-1) || light_hit.t >= dist_to_light) {
             auto light_color = light->getColorAt(hit_point_3);
-            result_color += calc_light_impact(light_color);
+            result_color += calc_light_impact(light_color, dir_to_light, material, to_float3(normal), base_color);
         }
     }
 

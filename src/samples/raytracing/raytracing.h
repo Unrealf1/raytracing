@@ -22,7 +22,7 @@ public:
   void kernel_InitEyeRay(uint32_t tidX, uint32_t tidY, LiteMath::float4* rayPosAndNear, LiteMath::float4* rayDirAndFar);
   void kernel_RayTrace(uint32_t tidX, uint32_t tidY, const LiteMath::float4* rayPosAndNear, const LiteMath::float4* rayDirAndFar, uint32_t* out_color);
 
-  void AddLight(std::shared_ptr<LightInfo> light) { m_lights.push_back(light); }
+  void AddLight(LightInfo* light) { m_lights.push_back(light); }
 
 protected:
   uint32_t m_width;
@@ -32,7 +32,7 @@ protected:
   LiteMath::float4x4 m_invProjView;
 
   std::shared_ptr<ISceneObject> m_pAccelStruct;
-  std::vector<std::shared_ptr<LightInfo>> m_lights;
+  std::vector<LightInfo*> m_lights;
   std::shared_ptr<SceneManager> m_scene_manager;
 
   static constexpr uint32_t palette_size = 20;
@@ -49,6 +49,7 @@ protected:
   const MaterialData_pbrMR& get_material_data(const CRT_Hit& hit);
   // returns color
   float3 trace(float4 rayPos, float4 rayDir, float3 background_color={0.0f, 0.0f, 0.0f});
+  float3 get_normal_from_hit(const CRT_Hit& hit);
 };
 
 #endif// VK_GRAPHICS_RT_RAYTRACING_H

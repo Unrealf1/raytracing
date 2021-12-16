@@ -13,7 +13,7 @@ struct LightInfo {
     virtual LiteMath::float3 getColorAt(const LiteMath::float3& point) = 0;
 
     virtual float getDistanceFrom(const LiteMath::float3& point) = 0;
-    virtual ~LightInfo();
+    virtual ~LightInfo() = default;
 };
 
 struct DirectionalLight: public LightInfo {
@@ -22,11 +22,10 @@ public:
         : m_color(color)
         , m_direction(direction) {}
 
-    LiteMath::float3 getDirectionFrom(const LiteMath::float3&) { return { -m_color[0], -m_color[1], -m_color[2]  }; } 
-    LiteMath::float3 getColorAt(const LiteMath::float3&) { return m_color; };
-    float getDistanceFrom(const LiteMath::float3&) { return std::numeric_limits<float>::infinity(); };
+    LiteMath::float3 getDirectionFrom(const LiteMath::float3&)override { return { -m_color[0], -m_color[1], -m_color[2]  }; } 
+    LiteMath::float3 getColorAt(const LiteMath::float3&) override{ return m_color; };
+    float getDistanceFrom(const LiteMath::float3&)override { return std::numeric_limits<float>::infinity(); };
 
-private:
     LiteMath::float3 m_color;
     LiteMath::float3 m_direction;
 };
@@ -37,18 +36,17 @@ public:
         : m_color(color)
         , m_position(position) {}
 
-    LiteMath::float3 getDirectionFrom(const LiteMath::float3& from) { return { m_position[0] - from[0], m_position[1] - from[1], m_position[2] - from[2] }; } 
-    LiteMath::float3 getColor(const LiteMath::float3& point) {
+    LiteMath::float3 getDirectionFrom(const LiteMath::float3& from) override{ return { m_position[0] - from[0], m_position[1] - from[1], m_position[2] - from[2] }; } 
+    LiteMath::float3 getColorAt(const LiteMath::float3& point)override {
         // turns out they DO have these operations...
         auto sum_sq = m_color[0]*m_color[0] + m_color[1]*m_color[1] + m_color[2]*m_color[2];
         auto distance = std::sqrt(sum_sq);   
         return m_color / distance;
     }; 
-    float getDistanceFrom(const LiteMath::float3& point) {
+    float getDistanceFrom(const LiteMath::float3& point) override {
         return LiteMath::length(point - m_position);
     }
 
-private:
     LiteMath::float3 m_color;
     LiteMath::float3 m_position;
 };
