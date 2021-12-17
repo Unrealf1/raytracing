@@ -467,7 +467,8 @@ void SimpleRender::UpdateView()
 void SimpleRender::LoadScene(const char* path)
 {
   //TODO: move somewhere else?
-  m_light_info = std::make_unique<PointLight>(float3{1.0f, 0.0f, 0.0f}, float3{0.0f, 0.0f, 0.0f});
+  m_light_info = std::make_unique<PointLight>(float3{1.0f, 1.0f, 1.0f}, float3{0.0f, 0.0f, 0.0f});
+  m_light_info2 = std::make_unique<DirectionalLight>(float3{1.0f, 1.0f, 1.0f}, float3{sin(3.1415f / 4.0f), cos(3.1415f / 4.0f), 0.0f});
 
   m_pScnMgr->LoadScene(path);
   if(ENABLE_HARDWARE_RT)
@@ -497,6 +498,7 @@ void SimpleRender::LoadScene(const char* path)
 //  auto loadedCam = m_pScnMgr->GetCamera(0);
 //  m_cam.fov = loadedCam.fov;
 //  m_cam.pos = float3(loadedCam.pos);
+  m_cam.pos = float3(-45.0f, 85.0f, 80.0f);
 //  m_cam.up  = float3(loadedCam.up);
 //  m_cam.lookAt = float3(loadedCam.lookAt);
 //  m_cam.tdist  = loadedCam.farPlane;
@@ -694,8 +696,8 @@ void SimpleRender::SetupGUIElements()
 
     ImGui::ColorEdit3("Meshes base color", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
     ImGui::SliderFloat3("Light source position", m_uniforms.lightPos.M, -10.f, 10.f);
-    //auto ptr = m_light_info->get();
-    //static_cast<PointLight*>(ptr)->m_position = m_uni
+    auto ptr = m_light_info.get();
+    static_cast<PointLight*>(ptr)->m_position = make_float3(m_uniforms.lightPos.M[0], m_uniforms.lightPos.M[1], m_uniforms.lightPos.M[2]);
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 

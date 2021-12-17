@@ -85,6 +85,7 @@ void SimpleRender::RayTraceCPU()
     m_pRayTracerCPU = std::make_unique<RayTracer>(m_width, m_height);
     m_pRayTracerCPU->SetScene(m_pAccelStruct);
     m_pRayTracerCPU->SetSceneManager(m_pScnMgr);
+    m_pRayTracerCPU->AddLight(m_light_info2.get());
     m_pRayTracerCPU->AddLight(m_light_info.get());
   }
 

@@ -6,8 +6,8 @@
 #include <iostream>
 #include "LiteMath.h"
 #include "render/CrossRT.h"
-#include "Light.h"
 #include "../../render/scene_mgr.h"
+#include "Light.h"
 
 class RayTracer
 {
@@ -48,7 +48,7 @@ protected:
 
   const MaterialData_pbrMR& get_material_data(const CRT_Hit& hit);
   // returns color
-  float3 trace(float4 rayPos, float4 rayDir, float3 background_color={0.0f, 0.0f, 0.0f});
+  float3 trace(float4 rayPos, float4 rayDir, float3 background_color={0.2f, 0.2f, 0.2f});
   float3 get_normal_from_hit(const CRT_Hit& hit);
 };
 
