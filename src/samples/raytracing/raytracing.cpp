@@ -75,12 +75,11 @@ static float3 mix_colors(float3 first, float3 second, float alpha) {
     return first * alpha + second * (1.0f - alpha);
 }
 
-//TODO: test
 static float3 destruct_color(uint32_t color) {
-    uint8_t r = 0x00ff0000 & color;
-    uint8_t g = 0x0000ff00 & color;
+    uint8_t r = (0x00ff0000 & color) >> 2 * 8;
+    uint8_t g = (0x0000ff00 & color) >> 1 * 8;
     uint8_t b = 0x000000ff & color;
-    return float3{r, g, b} / 256.0f;
+    return float3{r, g, b} / 255.0f;
 }
 
 static float3 PhongShading(
@@ -156,7 +155,7 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color) {
 
     if (hit.instId == uint32_t(-1)) {
         return background_color;
-    }
+    } 
 
     auto normal = LiteMath::to_float4(get_normal_from_hit(hit), 0.0f);
     auto material = get_material_data(hit);
@@ -175,6 +174,8 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color) {
             result_color += calc_light_impact(light_color, dir_to_light, material, to_float3(normal), base_color);
         }
     }
+    //TODO:remove
+    return result_color;
 
     if (material.metallic > 0.0f) {
           auto new_dir = LiteMath::reflect(rayDir, normal);
