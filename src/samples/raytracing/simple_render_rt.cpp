@@ -95,7 +95,8 @@ void SimpleRender::RayTraceCPU()
   {
     for (size_t i = 0; i < m_width; ++i)
     {
-      m_pRayTracerCPU->CastSingleRay(i, j, m_raytracedImageData.data());
+      m_pRayTracerCPU->CastAARays(i, j, m_raytracedImageData.data(), m_pRayTracerCPU->m_aa_rays);
+      //m_pRayTracerCPU->CastSingleRay(i, j, m_raytracedImageData.data());
     }
   }
 

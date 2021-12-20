@@ -1,41 +1,56 @@
 #include "raytracing.h"
 #include "float.h"
+#include "fractals.hpp"
 
 #include <cmath>
 #include <limits>
+#include <list>
 
+using namespace fractals;
 
-struct material {
-    float3 color = {0.0f, 0.0f, 0.0f};
-    float metallic = 0.0f;
-};
 
 static constexpr float incorrect_val = std::numeric_limits<float>::infinity();
 static bool is_correct_hit(float3 hit) {
     return hit[0] != incorrect_val;
 }
 
-static float sphere(float3 position, float3 sphere_pos, float sphere_radius) {
-    return LiteMath::length(sphere_pos - position) -  sphere_radius;
+static std::vector<SDF_base*>& get_sdfs() {
+    static std::vector<SDF_base*> sdfs = {
+        make_sphere({0.0f, 20.0f, 0.0f}, 8.0f, {{1.0f, 0.5f, 0.1f}, 0.1f}),
+        make_repeating(5.0f, {5.0f, 5.0f, 5.0f}, make_sphere({0.0f, 0.0f, 0.0f}, 5.0f, {{0.0f, 1.0f, 0.2f}, 0.1f})),
+        //make_pyramid(0.1f, {{1.0f, 1.0f, 1.0f}, 0.2f}),
+        //make_octahedron({0.0f, -40.0f, 20.0f}, 5.0f, {{1.0f, 1.0f, 1.0f}, 0.1f}),
+        //make_octahedron_e({0.0f, -40.0f, -20.0f}, 5.0f, {{1.0f, 0.0f, 0.0f}, 0.1f})
+    };
+
+    return sdfs;
+}
+
+static std::pair<float, material> sdf_request(float3 position) {
+    material mat;
+    float dist = incorrect_val;
+
+    auto& sdfs = get_sdfs();
+    for (auto& sdf : sdfs) {
+        float cur_dist = sdf->calc_distance(position);
+        if (cur_dist < dist) {
+            mat = sdf->get_material(position);
+            dist = cur_dist;
+        }
+    }
+
+
+    return {dist, mat};
 }
 
 static float distance_at(float3 position) {
-    return std::min(
-        sphere(position, {0.0f, 0.0f, 0.0f}, 5.0f),
-        sphere(position, {0.0f, 20.0f, 0.0f}, 8.0f)
-    );
+    auto [dist, _] = sdf_request(position);
+    return dist;
 }
 
-static material material_at(float3 position) {
-    auto dist1 = sphere(position, {0.0f, 0.0f, 0.0f}, 5.0f);
-    auto dist2 = sphere(position, {0.0f, 2.0f, 0.0f}, 8.0f);
-    float m = dist1 < dist1 ? 1.0f : 0.1f;
-
-    return {{1.0f, 0.5f, 0.1f}, m};
-}
 
 // from the doc
-static float3 EstimateNormal(float3 z, float eps = 0.001f)
+static float3 EstimateNormal(float3 z, float eps = 0.00001f)
 {
         float3 z1 = z + float3(eps, 0, 0);
         float3 z2 = z - float3(eps, 0, 0);
@@ -53,8 +68,7 @@ float3 RayTracer::trace_marching_pos(float3 ray_pos, float3 ray_dir, int steps, 
     if (steps == 0) {
         return {incorrect_val, incorrect_val, incorrect_val};
     }
-
-    float current_distance = distance_at(ray_pos);
+    auto [current_distance, _] = sdf_request(ray_pos);
     auto new_pos = ray_pos + ray_dir * current_distance;
     float new_distance = distance_at(new_pos);
     if (new_distance <= min_dist) {
@@ -72,7 +86,7 @@ float3 RayTracer::trace_marching(float3 ray_pos, float3 ray_dir, float3 backgrou
     auto& hit_pos = final_pos;
     auto normal = EstimateNormal(hit_pos);
     auto reflection_dir = LiteMath::normalize(LiteMath::reflect(ray_dir, normal));
-    auto mat = material_at(hit_pos);
+    auto [distance, mat] = sdf_request(hit_pos);
     auto base_color = mat.color;
     float3 result_color(0.0f, 0.0f, 0.0f);
 
@@ -104,6 +118,7 @@ float3 RayTracer::trace_marching(float3 ray_pos, float3 ray_dir, float3 backgrou
                 mat.metallic
             );
         } 
+        break; //TODO: remove
     }
     //std::cout << result_color[0] << std::endl;
     //exit(0);

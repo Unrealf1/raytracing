@@ -2,12 +2,21 @@
 #define VK_GRAPHICS_RT_RAYTRACING_H
 
 #include <cstdint>
+#include <random>
 #include <memory>
 #include <iostream>
 #include "LiteMath.h"
 #include "render/CrossRT.h"
 #include "../../render/scene_mgr.h"
 #include "Light.h"
+
+
+
+inline double random_double() {
+    static std::uniform_real_distribution<double> distribution(0.0, 1.0);
+    static std::mt19937 generator;
+    return distribution(generator);
+}
 
 class RayTracer
 {
@@ -19,7 +28,8 @@ public:
   void SetSceneManager(std::shared_ptr<SceneManager> scene_manager) { m_scene_manager = std::move(scene_manager); };
 
   void CastSingleRay(uint32_t tidX, uint32_t tidY, uint32_t* out_color);
-  void kernel_InitEyeRay(uint32_t tidX, uint32_t tidY, LiteMath::float4* rayPosAndNear, LiteMath::float4* rayDirAndFar);
+  void CastAARays(uint32_t tidX, uint32_t tidY, uint32_t* out_color, int num_aa_rays);
+  void kernel_InitEyeRay(uint32_t tidX, uint32_t tidY, LiteMath::float4* rayPosAndNear, LiteMath::float4* rayDirAndFar, float offset_x = 0.0f, float offset_y = 0.0f);
   void kernel_RayTrace(uint32_t tidX, uint32_t tidY, const LiteMath::float4* rayPosAndNear, const LiteMath::float4* rayDirAndFar, uint32_t* out_color);
 
   void AddLight(LightInfo* light) { m_lights.push_back(light); }
@@ -29,7 +39,8 @@ public:
   int m_marching_steps = 50;
   int m_reflection_depth = 3;
   int m_diffuse_spread = 3;
-  bool m_is_marching = true;
+  int m_aa_rays = 3;
+  bool m_is_marching = false;
 protected:
   uint32_t m_width;
   uint32_t m_height;

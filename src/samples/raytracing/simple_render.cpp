@@ -717,6 +717,7 @@ void SimpleRender::SetupGUIElements()
 
         ImGui::SliderInt("Reflection depth", &tracer->m_reflection_depth, 0, 20);
         ImGui::SliderInt("Diffuse rays", &tracer->m_diffuse_spread, 0, 20);
+        ImGui::SliderInt("Number of AA rays", &tracer->m_aa_rays, 1, 10);
     }
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

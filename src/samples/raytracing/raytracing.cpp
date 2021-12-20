@@ -2,67 +2,6 @@
 #include "float.h"
 
 #include <cmath>
-
-LiteMath::float3 EyeRayDir(float x, float y, float w, float h, LiteMath::float4x4 a_mViewProjInv)
-{
-  LiteMath::float4 pos = LiteMath::make_float4( 2.0f * (x + 0.5f) / w - 1.0f,
-    2.0f * (y + 0.5f) / h - 1.0f,
-    0.0f,
-    1.0f );
-
-  pos = a_mViewProjInv * pos;
-  pos /= pos.w;
-
-  //  pos.y *= (-1.0f);
-
-  return normalize(to_float3(pos));
-}
-
-void RayTracer::CastSingleRay(uint32_t tidX, uint32_t tidY, uint32_t* out_color)
-{
-  LiteMath::float4 rayPosAndNear, rayDirAndFar;
-  kernel_InitEyeRay(tidX, tidY, &rayPosAndNear, &rayDirAndFar);
-
-  kernel_RayTrace(tidX, tidY, &rayPosAndNear, &rayDirAndFar, out_color);
-}
-
-void RayTracer::kernel_InitEyeRay(uint32_t tidX, uint32_t tidY, LiteMath::float4* rayPosAndNear, LiteMath::float4* rayDirAndFar)
-{
-  *rayPosAndNear = m_camPos; // to_float4(m_camPos, 1.0f);
-  
-  const LiteMath::float3 rayDir  = EyeRayDir(float(tidX), float(tidY), float(m_width), float(m_height), m_invProjView);
-  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
-}
-/*
-// calculate reflected ray direction
-static LiteMath::float4 reflect(ray, hit) {
-    return {};
-}
-
-// calculate refracted ray direction
-static LiteMath::float4 refract(ray, hit) {
-    return {};
-}
-*/
-
-//TODO
-const MaterialData_pbrMR& RayTracer::get_material_data(const CRT_Hit& hit) {
-    // primid -> triangle
-    // meshinfo ->indexoffset (оффсет троек)
-    // indexoffset / 3 -> оффсет для всех примитивов данного меша
-    // primitiveid -> 
-    // meshbuffer[]
-
-    if (m_scene_manager->m_materials.empty()) {
-        static MaterialData_pbrMR fake_material = {};
-        return fake_material;
-    }
-    auto mesh_info = m_scene_manager->GetMeshInfo(hit.geomId);
-    uint32_t mat_id = m_scene_manager->m_matIDs[mesh_info.m_indexOffset / 3 + hit.primId];
-
-    return m_scene_manager->m_materials[mat_id];
-}
-
 //TODO: test
 static uint32_t create_color(uint8_t red, uint8_t green, uint8_t blue) {
     return (red << 16) | (green << 8) | blue;
@@ -87,6 +26,66 @@ static float3 destruct_color(uint32_t color) {
     uint8_t b = 0x000000ff & color;
     return float3{r, g, b} / 255.0f;
 }
+
+LiteMath::float3 EyeRayDir(float x, float y, float w, float h, LiteMath::float4x4 a_mViewProjInv)
+{
+  LiteMath::float4 pos = LiteMath::make_float4( 2.0f * (x + 0.5f) / w - 1.0f,
+    2.0f * (y + 0.5f) / h - 1.0f,
+    0.0f,
+    1.0f );
+
+  pos = a_mViewProjInv * pos;
+  pos /= pos.w;
+
+  //  pos.y *= (-1.0f);
+
+  return normalize(to_float3(pos));
+}
+
+void RayTracer::CastSingleRay(uint32_t tidX, uint32_t tidY, uint32_t* out_color)
+{
+  LiteMath::float4 rayPosAndNear, rayDirAndFar;
+  kernel_InitEyeRay(tidX, tidY, &rayPosAndNear, &rayDirAndFar);
+
+  kernel_RayTrace(tidX, tidY, &rayPosAndNear, &rayDirAndFar, out_color);
+}
+
+void RayTracer::CastAARays(uint32_t tidX, uint32_t tidY, uint32_t* out_color, int num_aa_rays) {
+  float3 final_color = {0.0f, 0.0f, 0.0f}; 
+  auto color_index = tidY * m_width + tidX;
+  for (int i = 0; i < num_aa_rays; ++i) {
+      float offset_x = random_double();
+      float offset_y = random_double();
+      LiteMath::float4 rayPosAndNear, rayDirAndFar;
+      kernel_InitEyeRay(tidX, tidY, &rayPosAndNear, &rayDirAndFar, offset_x, offset_y);
+      kernel_RayTrace(tidX, tidY, &rayPosAndNear, &rayDirAndFar, out_color);
+      uint32_t temp_color = out_color[color_index];
+      final_color += destruct_color(temp_color);
+  }
+  final_color /= float(num_aa_rays);
+  out_color[color_index] = create_color(final_color[0], final_color[1], final_color[2]);
+}
+
+void RayTracer::kernel_InitEyeRay(uint32_t tidX, uint32_t tidY, LiteMath::float4* rayPosAndNear, LiteMath::float4* rayDirAndFar, float offset_x, float offset_y)
+{
+  *rayPosAndNear = m_camPos; // to_float4(m_camPos, 1.0f);
+  
+  const LiteMath::float3 rayDir  = EyeRayDir(float(tidX) + offset_x, float(tidY) + offset_y, float(m_width), float(m_height), m_invProjView);
+  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+}
+
+const MaterialData_pbrMR& RayTracer::get_material_data(const CRT_Hit& hit) {
+
+    if (m_scene_manager->m_materials.empty()) {
+        static MaterialData_pbrMR fake_material = {};
+        return fake_material;
+    }
+    auto mesh_info = m_scene_manager->GetMeshInfo(hit.geomId);
+    uint32_t mat_id = m_scene_manager->m_matIDs[mesh_info.m_indexOffset / 3 + hit.primId];
+
+    return m_scene_manager->m_materials[mat_id];
+}
+
 
 float3 RayTracer::calc_light_impact(
         float3 dir_to_light,
@@ -206,7 +205,7 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
     }
 
     //TODO: test and fix
-    int random1 = depth + diffuse_spread + int(rayPos[1] * 100.0f) + int(rayDir[1] * 100.0f);
+    /*int random1 = depth + diffuse_spread + int(rayPos[1] * 100.0f) + int(rayDir[1] * 100.0f);
     int random2 = random1 * random1;
     float3 additional_diffuse = {0.0f, 0.0f, 0.0f};
     
@@ -221,7 +220,7 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
     }
     additional_diffuse /= diffuse_spread;
     //result_color += additional_diffuse;
-
+    */
     /*
 
     if (hit.material.refraction > 0)
