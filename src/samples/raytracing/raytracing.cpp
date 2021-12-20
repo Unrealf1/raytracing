@@ -227,7 +227,7 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
     bool is_glass = hit.instId == glass_id;
     bool is_metal = hit.instId == metal_id;
     float refraction = is_glass ? 0.9f : 0.01f;
-    material.metallic = random_double() * random_double(); //hit.instId % 3 == 0 ? 1.0f : 0.0f;
+    material.metallic = 0.5f * random_double() * random_double(); //hit.instId % 3 == 0 ? 1.0f : 0.0f;
     if (is_metal) {
         material.metallic = 1.0f;
     }
@@ -264,7 +264,7 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
         } 
     }
 
-    //TODO: test and fix
+    //TODO: not viable on my pc :(
     /*int random1 = depth + diffuse_spread + int(rayPos[1] * 100.0f) + int(rayDir[1] * 100.0f);
     int random2 = random1 * random1;
     float3 additional_diffuse = {0.0f, 0.0f, 0.0f};

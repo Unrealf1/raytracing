@@ -16,12 +16,14 @@ static bool is_correct_hit(float3 hit) {
 
 static std::vector<SDF_base*>& get_sdfs() {
     static std::vector<SDF_base*> sdfs = {
-        //make_fractal1({{1.0f, 0.5f, 0.2f}, 0.0f}),
+        //make_plane(0.0f, {{0.4f, 0.4f, 0.4f}, 0.2f}),
+        //make_fractal1({{1.0f, 0.5f, 0.2f}, 0.5f}),
+        make_fractal2({{1.0f, 0.5f, 0.2f}, 0.0f}),
         //make_sphere({0.0f, 20.0f, 0.0f}, 8.0f, {{1.0f, 0.5f, 0.1f}, 0.1f}),
-        make_repeating(7.0f, {3.0f, 5.0f, 5.0f}, make_sphere({0.0f, 0.0f, 0.0f}, 5.0f, {{0.0f, 1.0f, 0.2f}, 0.1f})),
+        //make_repeating(7.0f, {3.0f, 5.0f, 5.0f}, make_sphere({0.0f, 0.0f, 0.0f}, 5.0f, {{0.0f, 1.0f, 0.2f}, 0.1f})),
         //make_pyramid(0.1f, {{1.0f, 1.0f, 1.0f}, 0.2f}),
         //make_octahedron({0.0f, -40.0f, 20.0f}, 5.0f, {{1.0f, 1.0f, 1.0f}, 0.1f}),
-        //make_octahedron_e({0.0f, -40.0f, -20.0f}, 5.0f, {{1.0f, 0.0f, 0.0f}, 0.1f})
+        //make_octahedron_e({0.0f, -40.0f, -20.0f}, 5.0f, {{1.0f, 0.0f, 0.0f}, 0.9f})
     };
 
     return sdfs;

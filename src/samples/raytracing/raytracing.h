@@ -36,11 +36,11 @@ public:
   void AddLight(LightInfo* light) { m_lights.push_back(light); }
 
   float3 m_background_color = {0.15f, 0.15f, 0.15f};
-  float m_min_matching_distance = 1.0e-5f;
-  int m_marching_steps = 50;
-  int m_reflection_depth = 3;
+  float m_min_matching_distance = 1.0e-3f;
+  int m_marching_steps = 30;
+  int m_reflection_depth = 1;
   int m_diffuse_spread = 3;
-  int m_aa_rays = 3;
+  int m_aa_rays = 4;
   bool m_is_marching = false;
 protected:
   uint32_t m_width;

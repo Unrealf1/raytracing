@@ -31,6 +31,17 @@ namespace fractals {
     };
 
     
+    float sdPlane(float3 position, float height) {
+        return abs(position.y);
+    }
+
+    SDF_base* make_plane(float height, material mat) {
+        auto this_sdf = [=](float3 position) {
+            return sdPlane(position, height);
+        };
+        return new SDF<decltype(this_sdf)>( this_sdf, mat );
+    }
+
     float sdSphere(float3 position, float3 sphere_pos, float sphere_radius) {
         return LiteMath::length(sphere_pos - position) -  sphere_radius;
     }
@@ -157,15 +168,15 @@ namespace fractals {
 
     float fractal2 (float3 z) {
         float3 offset = z;
-        float dr = 1.0;
-        int Iterations = 10;
-        float Scale = 1.0f;
+        float dr = 1.0f;
+        int Iterations = 30;
+        float Scale = 2.0f;
         for (int n = 0; n < Iterations; n++) {
             boxFold(z,dr);       // Reflect
             sphereFold(z,dr);    // Sphere Inversion
             
                     z=Scale*z + offset;  // Scale & Translate
-                    dr = dr*abs(Scale)+1.0;
+                    dr = dr*abs(Scale)+1.0f;
         }
         float r = length(z);
         return r/abs(dr);
@@ -227,36 +238,49 @@ namespace fractals {
         return sdPyramid( p, 1.0f);
     }
 
-    float fractal5 (float3 z, int Iterations = 7, float Scale = 1.5f) {
-        float3 a1 = float3(1,1,1);
-        float3 a2 = float3(-1,-1,1);
-        float3 a3 = float3(1,-1,-1);
-        float3 a4 = float3(-1,1,-1);
+    float fractal5 (float3 z, int Iterations = 30, float Scale = 2.0f) {
+        // create a simple tetrahedron
+        float3 a1 = float3(1.0f, 1.0f, 1.0f);
+        float3 a2 = float3(-1.0f, -1.0f, 1.0f);
+        float3 a3 = float3(1.0f,-1.0f,-1.0f);
+        float3 a4 = float3(-1.0f,1.0f,-1.0f);
         float3 c;
         int n = 0;
         float dist, d;
         while (n < Iterations) {
+             // choose point, closest to the position
              c = a1; dist = length(z-a1);
              d = length(z-a2); if (d < dist) { c = a2; dist=d; }
              d = length(z-a3); if (d < dist) { c = a3; dist=d; }
              d = length(z-a4); if (d < dist) { c = a4; dist=d; }
-            z = Scale*z-c*(Scale-1.0f);
-            n++;
+             z = Scale*z-c*(Scale-1.0f);
+             n++;
         }
 
         return length(z) * pow(Scale, float(-n));
 
     }
 
-    float DE(float3 z)
+    float infinite_spheres(float3 z)
     {
-      z.x = floor(z.x);
-      z.y = floor(z.y);
-      return length(z)-0.3;
+      auto copy = z;
+      copy.x = round(z.x);
+      copy.y = round(z.y);
+      copy.z = 0.0f;
+      return sdSphere(z, copy, 0.3f);
     }
 
     SDF_base* make_fractal1(material mat) {
-        auto this_sdf = [](float3 position) { return DE(position); };
+        auto this_sdf = [](float3 position) { return infinite_spheres(position); };
         return new SDF<decltype(this_sdf)>( this_sdf, mat );
     }
+    SDF_base* make_fractal2(material mat) {
+        auto this_sdf = [](float3 position) { return fractal5(position); };
+        return new SDF<decltype(this_sdf)>( this_sdf, mat );
+    }
+    SDF_base* make_fractal3(material mat) {
+        auto this_sdf = [](float3 position) { return fractal2(position); };
+        return new SDF<decltype(this_sdf)>( this_sdf, mat );
+    }
+
 }
