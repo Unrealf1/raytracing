@@ -71,6 +71,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/src/render)
 ##############################################
 
+#add_subdirectory(external/soil)
 add_subdirectory(external/volk)
 add_subdirectory(src/samples/raytracing)
 

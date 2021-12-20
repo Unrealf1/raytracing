@@ -18,7 +18,7 @@ static std::vector<SDF_base*>& get_sdfs() {
     static std::vector<SDF_base*> sdfs = {
         //make_fractal1({{1.0f, 0.5f, 0.2f}, 0.0f}),
         //make_sphere({0.0f, 20.0f, 0.0f}, 8.0f, {{1.0f, 0.5f, 0.1f}, 0.1f}),
-        make_repeating(5.0f, {5.0f, 5.0f, 5.0f}, make_sphere({0.0f, 0.0f, 0.0f}, 5.0f, {{0.0f, 1.0f, 0.2f}, 0.1f})),
+        make_repeating(7.0f, {3.0f, 5.0f, 5.0f}, make_sphere({0.0f, 0.0f, 0.0f}, 5.0f, {{0.0f, 1.0f, 0.2f}, 0.1f})),
         //make_pyramid(0.1f, {{1.0f, 1.0f, 1.0f}, 0.2f}),
         //make_octahedron({0.0f, -40.0f, 20.0f}, 5.0f, {{1.0f, 1.0f, 1.0f}, 0.1f}),
         //make_octahedron_e({0.0f, -40.0f, -20.0f}, 5.0f, {{1.0f, 0.0f, 0.0f}, 0.1f})
@@ -80,8 +80,15 @@ float3 RayTracer::trace_marching_pos(float3 ray_pos, float3 ray_dir, int steps, 
 
 float3 RayTracer::trace_marching(float3 ray_pos, float3 ray_dir, float3 background_color, int steps, float min_dist, int depth) {
     auto final_pos = trace_marching_pos(ray_pos, ray_dir, steps, min_dist);
-    if (!is_correct_hit(final_pos)) {
-        return background_color;
+    if (!is_correct_hit(final_pos)) { 
+        int index = 1;
+        float u;
+        float v;
+        convert_xyz_to_cube_uv(ray_dir.x, ray_dir.y, ray_dir.z, &index, &u, &v);
+        if (index == -1) {
+            return background_color;
+        }
+        return sample_from_image({u, v}, m_cubemap[index].first, m_cubemap[index].second);
     }
 
     auto& hit_pos = final_pos;

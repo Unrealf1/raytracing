@@ -87,6 +87,22 @@ void SimpleRender::RayTraceCPU()
     m_pRayTracerCPU->SetSceneManager(m_pScnMgr);
     m_pRayTracerCPU->AddLight(m_light_info2.get());
     m_pRayTracerCPU->AddLight(m_light_info.get());
+    std::string cubemap_base_dir = "../resources/cubemaps/yokohama/";
+    // 1 - right
+    // 2 - left 
+    // 3 - up
+    // 4 - down
+    // 5 - back
+    // 6 - front
+    // "../resources/cubemaps/test.jpg",
+    m_pRayTracerCPU->load_cubemap({
+        cubemap_base_dir+"posz.jpg", // left or right, probably
+        cubemap_base_dir+"negz.jpg",
+        cubemap_base_dir+"posy.jpg", // up
+        cubemap_base_dir+"negy.jpg", 
+        cubemap_base_dir+"negx.jpg",
+        cubemap_base_dir+"posx.jpg",
+    });
   }
 
   m_pRayTracerCPU->UpdateView(m_cam.pos, m_inverseProjViewMatrix);

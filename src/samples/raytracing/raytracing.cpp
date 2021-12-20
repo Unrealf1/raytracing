@@ -1,7 +1,21 @@
 #include "raytracing.h"
 #include "float.h"
 
+#include <iostream>
 #include <cmath>
+
+void RayTracer::load_cubemap(const std::array<std::string, 6>& paths) {
+    for (size_t i = 0; i < paths.size(); ++i) {
+        auto& path = paths[i];
+        auto im_info = getImageInfo(path);
+        std::cout << "loading cubemap with " << im_info.channels << " channels\n";
+        std::cout << im_info.bytesPerChannel << " bytes per channel\n";
+        m_cubemap[i] = {loadImageLDR(im_info), im_info};
+    }
+}
+
+
+
 //TODO: test
 static uint32_t create_color(uint8_t red, uint8_t green, uint8_t blue) {
     return (red << 16) | (green << 8) | blue;
@@ -27,6 +41,36 @@ static float3 destruct_color(uint32_t color) {
     return float3{r, g, b} / 255.0f;
 }
 
+float3 sample_from_image(float2 uv, std::vector<unsigned char>& data, ImageFileInfo& info) {
+    int x = int(uv[0] * info.width);
+    int y = int(uv[1] * info.height);
+
+    int iu = int(floor(uv[0] * info.width));
+    int iv = int(floor(uv[1] * info.height));
+    float u_r = uv[0] - float(iu);
+    float v_r = uv[1] - float(iv);
+    float u_inv = 1.0f - u_r;
+    float v_inv = 1.0f - v_r;
+
+    auto get_pixel_4 = [&](int index) -> float3 {
+        int pixel_size = 4 * info.bytesPerChannel;
+        unsigned char* current_data = data.data() + index * pixel_size;
+        if (current_data - data.data() >= data.size() || current_data < data.data()) {
+            current_data = data.data(); //TODO: do something more intelligent
+        }
+
+        auto color = create_color(*current_data, *(current_data + 1), *(current_data + 2));
+        return destruct_color(color);
+    };
+
+    if (info.channels > 4 || info.channels < 3) {
+        exit(1); //TODO: remove
+    }
+    auto width = info.width;
+    return get_pixel_4(width * x + y);
+    return (get_pixel_4(width * x + y) * u_inv + get_pixel_4(width * (x + 1) + y) * u_r) * v_inv +
+           (get_pixel_4(width * x + y + 1) * u_inv + get_pixel_4(width * (x + 1) + y + 1) * u_r) * v_r;
+}
 LiteMath::float3 EyeRayDir(float x, float y, float w, float h, LiteMath::float4x4 a_mViewProjInv)
 {
   LiteMath::float4 pos = LiteMath::make_float4( 2.0f * (x + 0.5f) / w - 1.0f,
@@ -135,6 +179,7 @@ float3 DecodeNormal(uint32_t a_data)
 
 //TODO: test
 float3 RayTracer::get_normal_from_hit(const CRT_Hit& hit) {
+
     using namespace LiteMath;
     const auto& mesh_info = m_scene_manager->GetMeshInfo(hit.geomId);
 
@@ -162,7 +207,14 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
     CRT_Hit hit = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir);
 
     if (hit.instId == uint32_t(-1)) {
-        return background_color;
+        int index = 1;
+        float u;
+        float v;
+        convert_xyz_to_cube_uv(rayDir.x, rayDir.y, rayDir.z, &index, &u, &v);
+        if (index == -1) {
+            return background_color;
+        }
+        return sample_from_image({u, v}, m_cubemap[index].first, m_cubemap[index].second);
     } 
 
     auto normal = LiteMath::to_float4(get_normal_from_hit(hit), 0.0f);
@@ -175,10 +227,10 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
     bool is_glass = hit.instId == glass_id;
     bool is_metal = hit.instId == metal_id;
     float refraction = is_glass ? 0.9f : 0.01f;
+    material.metallic = random_double() * random_double(); //hit.instId % 3 == 0 ? 1.0f : 0.0f;
     if (is_metal) {
         material.metallic = 1.0f;
     }
-    //material.metallic = random_double(); //hit.instId % 3 == 0 ? 1.0f : 0.0f;
     //auto base_color = LiteMath::float3(material.baseColor[0],material.baseColor[1],material.baseColor[2]);
     LiteMath::float3 hit_point = to_float3(rayPos) + normalize(to_float3(rayDir)) * hit.t;
 

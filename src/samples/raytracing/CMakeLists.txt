@@ -51,11 +51,12 @@ add_executable(raytracing main.cpp ../../utils/glfw_window.cpp
         ${IMGUI_SRC}
         ${GENERATED_SOURCE})
 
+
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
     set_target_properties(raytracing PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
     target_link_libraries(raytracing PRIVATE project_options
-                          volk glfw3 project_warnings
+                          volk glfw3 project_warnings 
                           ${RAYTRACING_EMBREE_LIBS})
 
     add_custom_command(TARGET raytracing POST_BUILD COMMAND ${CMAKE_COMMAND}

@@ -9,6 +9,7 @@
 #include "render/CrossRT.h"
 #include "../../render/scene_mgr.h"
 #include "Light.h"
+#include "loader_utils/image_loader.h"
 
 
 
@@ -31,11 +32,11 @@ public:
   void CastAARays(uint32_t tidX, uint32_t tidY, uint32_t* out_color, int num_aa_rays);
   void kernel_InitEyeRay(uint32_t tidX, uint32_t tidY, LiteMath::float4* rayPosAndNear, LiteMath::float4* rayDirAndFar, float offset_x = 0.0f, float offset_y = 0.0f);
   void kernel_RayTrace(uint32_t tidX, uint32_t tidY, const LiteMath::float4* rayPosAndNear, const LiteMath::float4* rayDirAndFar, uint32_t* out_color);
-
+  void load_cubemap(const std::array<std::string, 6>& paths);
   void AddLight(LightInfo* light) { m_lights.push_back(light); }
 
   float3 m_background_color = {0.15f, 0.15f, 0.15f};
-  float m_min_matching_distance = 1.0e-6f;
+  float m_min_matching_distance = 1.0e-5f;
   int m_marching_steps = 50;
   int m_reflection_depth = 3;
   int m_diffuse_spread = 3;
@@ -51,6 +52,10 @@ protected:
   std::shared_ptr<ISceneObject> m_pAccelStruct;
   std::vector<LightInfo*> m_lights;
   std::shared_ptr<SceneManager> m_scene_manager;
+
+  std::array<std::pair<std::vector<unsigned char>, ImageFileInfo>, 6> m_cubemap = {};
+  int m_cubemap_width = 0;
+  int m_cubemap_height = 0;
 
   static constexpr uint32_t palette_size = 20;
   // color palette to select color for objects based on mesh/instance id
@@ -83,5 +88,79 @@ protected:
         float specular = 0.5f,
         float blinn_pow = 3.0f);
 };
+  inline void convert_xyz_to_cube_uv(float x, float y, float z, int *index, float *u, float *v)
+  {
+    float absX = fabs(x);
+    float absY = fabs(y);
+    float absZ = fabs(z);
+      
+    int isXPositive = x > 0 ? 1 : 0;
+    int isYPositive = y > 0 ? 1 : 0;
+    int isZPositive = z > 0 ? 1 : 0;
+      
+    float maxAxis, uc, vc;
+      
+    // POSITIVE X
+    if (isXPositive && absX >= absY && absX >= absZ) {
+      // u (0 to 1) goes from +z to -z
+      // v (0 to 1) goes from -y to +y
+      maxAxis = absX;
+      uc = -z;
+      vc = y;
+      *index = 0;
+    }
+    // NEGATIVE X
+    if (!isXPositive && absX >= absY && absX >= absZ) {
+      // u (0 to 1) goes from -z to +z
+      // v (0 to 1) goes from -y to +y
+      maxAxis = absX;
+      uc = z;
+      vc = y;
+      *index = 1;
+    }
+    // POSITIVE Y
+    if (isYPositive && absY >= absX && absY >= absZ) {
+      // u (0 to 1) goes from -x to +x
+      // v (0 to 1) goes from +z to -z
+      maxAxis = absY;
+      uc = x;
+      vc = -z;
+      *index = 2;
+    }
+    // NEGATIVE Y
+    if (!isYPositive && absY >= absX && absY >= absZ) {
+    // u (0 to 1) goes from -x to +x
+      // v (0 to 1) goes from -z to +z
+      maxAxis = absY;
+      uc = x;
+      vc = z;
+      *index = 3;
+    }
+    // POSITIVE Z
+    if (isZPositive && absZ >= absX && absZ >= absY) {
+      // u (0 to 1) goes from -x to +x
+      // v (0 to 1) goes from -y to +y
+      maxAxis = absZ;
+      uc = x;
+      vc = y;
+      *index = 4;
+    }
+    // NEGATIVE Z
+    if (!isZPositive && absZ >= absX && absZ >= absY) {
+      // u (0 to 1) goes from +x to -x
+      // v (0 to 1) goes from -y to +y
+      maxAxis = absZ;
+      uc = -x;
+      vc = y;
+      *index = 5;
+    }
+
+    // Convert range from -1 to 1 to 0 to 1
+    *u = 0.5f * (uc / maxAxis + 1.0f);
+    *v = 0.5f * (vc / maxAxis + 1.0f);
+  }
+
+  float3 sample_from_image(float2 uv, std::vector<unsigned char>& data, ImageFileInfo& info);
+     
 
 #endif// VK_GRAPHICS_RT_RAYTRACING_H
