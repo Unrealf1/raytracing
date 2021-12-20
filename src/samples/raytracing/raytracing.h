@@ -24,6 +24,11 @@ public:
 
   void AddLight(LightInfo* light) { m_lights.push_back(light); }
 
+  float3 m_background_color = {0.15f, 0.15f, 0.15f};
+  float m_min_matching_distance = 1.0e-6f;
+  int m_marching_steps = 60;
+  int m_reflection_depth = 4;
+  bool m_is_marching = true;
 protected:
   uint32_t m_width;
   uint32_t m_height;
@@ -46,10 +51,25 @@ protected:
   };
 
 
+
   const MaterialData_pbrMR& get_material_data(const CRT_Hit& hit);
   // returns color
-  float3 trace(float4 rayPos, float4 rayDir, float3 background_color={0.2f, 0.2f, 0.2f});
+  float3 trace(float4 rayPos, float4 rayDir, float3 background_color, int depth);
+  float3 trace_marching(float3 rayPos, float3 rayDir, float3 background_color, int steps, float min_dist, int depth);
+  static float3 trace_marching_pos(float3 ray_pos, float3 ray_dir, int steps, float min_dist);
+
   float3 get_normal_from_hit(const CRT_Hit& hit);
+  static float3 calc_light_impact(
+        float3 dir_to_light,
+        float dist_to_light,
+        float3 reflection_dir,
+        float3 normal,
+        float3 ray_dir,
+        float3 base_color,
+        float3 light_color,
+        float ambient=0.1f,
+        float specular = 0.5f,
+        float blinn_pow = 3.0f);
 };
 
 #endif// VK_GRAPHICS_RT_RAYTRACING_H

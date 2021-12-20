@@ -121,6 +121,8 @@ protected:
   UniformParams m_uniforms {};
   std::unique_ptr<LightInfo> m_light_info;
   std::unique_ptr<LightInfo> m_light_info2;
+  float m_dir_light_angle = 0.0f;
+
   VkBuffer m_ubo = VK_NULL_HANDLE;
   VkDeviceMemory m_uboAlloc = VK_NULL_HANDLE;
   void* m_uboMappedMem = nullptr;

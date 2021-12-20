@@ -1,6 +1,8 @@
 #include "raytracing.h"
 #include "float.h"
 
+#include <cmath>
+
 LiteMath::float3 EyeRayDir(float x, float y, float w, float h, LiteMath::float4x4 a_mViewProjInv)
 {
   LiteMath::float4 pos = LiteMath::make_float4( 2.0f * (x + 0.5f) / w - 1.0f,
@@ -86,28 +88,30 @@ static float3 destruct_color(uint32_t color) {
     return float3{r, g, b} / 255.0f;
 }
 
-static float3 PhongShading(
-    float3 normal, 
-    float3 dir_to_light, 
-    float3 diffuse_color, 
-    float3 specular_color, 
-    float3 ambient_color,
-    float3 light_color
-) {
-    return light_color * diffuse_color;
-    float NdotL = std::max(dot(normal, dir_to_light), 0.0f);
-    return diffuse_color * (light_color * NdotL);
-}
+float3 RayTracer::calc_light_impact(
+        float3 dir_to_light,
+        float dist_to_light,
+        float3 reflection_dir,
+        float3 normal,
+        float3 ray_dir,
+        float3 base_color,
+        float3 light_color,
+        float specular,
+        float ambient,
+        float blinn_pow
 
-//TODO
-static float3 calc_light_impact(
-    float3 light_color,
-    float3 dir_to_light,
-    const MaterialData_pbrMR& material,
-    float3 normal,
-    float3 base_color
 ) {
-    return PhongShading(normal, dir_to_light, base_color, base_color, float3(material.metallic), light_color);
+    float3 result_color(0.0f, 0.0f, 0.0f);
+    float k = std::max(dot(dir_to_light, normal), 0.0f);
+    if (k <= 0.0f || true) {
+        result_color += base_color * light_color * ambient * 5.0f;
+        return result_color;
+    }
+    float distance_k = dist_to_light < std::numeric_limits<float>::max() ? 1.0f / (dist_to_light * dist_to_light) : 1.0f;
+    result_color += base_color * light_color * (k * distance_k + ambient);
+    float blinn_k = powf(dot(reflection_dir, float3(0.0f, 0.0f, 0.0f) - ray_dir), blinn_pow);
+    result_color += LiteMath::float3(1.0f, 1.0f, 1.0f) * specular * blinn_k;
+    return result_color;
 }
 
 // from "resources/shaders/unpack_attributes.h"
@@ -155,7 +159,8 @@ float3 RayTracer::get_normal_from_hit(const CRT_Hit& hit) {
     return normal;
 }
 
-float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color) {
+
+float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, int depth) {
     CRT_Hit hit = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir);
 
     if (hit.instId == uint32_t(-1)) {
@@ -163,10 +168,22 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color) {
     } 
 
     auto normal = LiteMath::to_float4(get_normal_from_hit(hit), 0.0f);
+    auto reflection_dir = LiteMath::normalize(LiteMath::reflect(rayDir, normal));
     auto material = get_material_data(hit);
+    //material.metallic = hit.instId % 3 == 0 ? 1.0f : 0.0f;
     auto result_color = LiteMath::float3{0.0f, 0.0f, 0.0f};
+    //auto base_color = destruct_color(m_palette[hit.instId % palette_size]);
     auto base_color = LiteMath::float3(material.baseColor[0],material.baseColor[1],material.baseColor[2]);
     LiteMath::float3 hit_point = to_float3(rayPos) + normalize(to_float3(rayDir)) * hit.t;
+
+    if (material.metallic > 0.0f && depth > 0) {
+          result_color += material.metallic * trace(to_float4(hit_point, 0.001f), reflection_dir, background_color, depth - 1);
+    }
+
+    if (material.metallic >= 1.0f) {
+        return result_color;
+    }
+
     for (auto& light : m_lights) {
         auto dir_to_light = light->getDirectionFrom(hit_point);
         auto dist_to_light = light->getDistanceFrom(hit_point);
@@ -175,17 +192,19 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color) {
         // dist to directional is always at inf distance
         if (light_hit.instId == uint32_t(-1) || light_hit.t >= dist_to_light) {
             auto light_color = light->getColor();
-            float k = std::max(dot(dir_to_light, to_float3(normal)), 0.0f);
-            float distance_k = dist_to_light < std::numeric_limits<float>::max() ? 1.0f / (dist_to_light * dist_to_light) : 1.0f;
-            float ambient = 0.1f;
-            result_color += base_color * light_color * (k * distance_k + ambient); 
+            result_color += calc_light_impact(
+                dir_to_light, 
+                dist_to_light, 
+                to_float3(reflection_dir), 
+                to_float3(normal),
+                to_float3(rayDir),
+                base_color,
+                light_color,
+                material.metallic
+            );
         } 
     }
 
-    if (material.metallic > 0.0f) {
-          auto new_dir = LiteMath::reflect(rayDir, normal);
-          result_color += material.metallic * trace(to_float4(hit_point, 0.001f), new_dir);
-    }
     /*
 
     if (hit.material.refraction > 0)
@@ -203,8 +222,9 @@ void RayTracer::kernel_RayTrace(uint32_t tidX, uint32_t tidY, const LiteMath::fl
     const LiteMath::float4 rayPos = *rayPosAndNear;
     const LiteMath::float4 rayDir = *rayDirAndFar ;
 
-    auto color = trace(rayPos, rayDir);
-
+    auto color = m_is_marching ? 
+        trace_marching(to_float3(rayPos), to_float3(rayDir), m_background_color, m_marching_steps, m_min_matching_distance, m_reflection_depth) : 
+        trace(rayPos, rayDir, m_background_color, m_reflection_depth);
     out_color[tidY * m_width + tidX] = create_color(color[2], color[1], color[0]);
 }
 

@@ -699,6 +699,25 @@ void SimpleRender::SetupGUIElements()
     auto ptr = m_light_info.get();
     static_cast<PointLight*>(ptr)->m_position = make_float3(m_uniforms.lightPos.M[0], m_uniforms.lightPos.M[1], m_uniforms.lightPos.M[2]);
 
+    ImGui::SliderFloat("Directional light angle", &m_dir_light_angle, -3.1415f, 3.1415f);
+    ptr = m_light_info2.get();
+    static_cast<DirectionalLight*>(ptr)->m_direction = make_float3(0.0f, sin(m_dir_light_angle), cos(m_dir_light_angle));
+
+    auto tracer = m_pRayTracerCPU.get();
+    if (tracer) {
+        ImGui::Checkbox("ray marching", &tracer->m_is_marching);
+        if (tracer->m_is_marching) {
+            ImGui::SliderInt("Max marching steps", &tracer->m_marching_steps, 1, 200);
+            //ImGui::SliderFloat("Marching min distance", &tracer->m_min_matching_distance, 1.0e-8f, 1.0f);
+        }
+        float background_color[3];
+        for (int i = 0; i < 3; ++i) background_color[i] = tracer->m_background_color[i];
+        ImGui::ColorEdit3("Background color", background_color);
+        for (int i = 0; i < 3; ++i) tracer->m_background_color[i] = background_color[i];
+
+        ImGui::SliderInt("Reflection depth", &tracer->m_reflection_depth, 0, 20);
+    }
+
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
     ImGui::NewLine();

@@ -44,6 +44,7 @@ int main()
   //app->LoadScene("../resources/scenes/043_cornell_normals/statex_00001.xml");
   app->LoadScene("../resources/scenes/buggy/Buggy.gltf");
   //app->LoadScene("../resources/scenes/box/Box.gltf");
+  //app->LoadScene("../resources/scenes/metal_rough_spheres/MetalRoughSpheres.gltf");
 
   bool showGUI = true;
   mainLoop(app, window, showGUI);
