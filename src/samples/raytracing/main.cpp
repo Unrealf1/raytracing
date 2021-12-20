@@ -41,10 +41,11 @@ int main()
 
   initVulkanGLFW(app, window, VULKAN_DEVICE_ID);
 
-  //app->LoadScene("../resources/scenes/043_cornell_normals/statex_00001.xml");
-  app->LoadScene("../resources/scenes/buggy/Buggy.gltf");
+  app->LoadScene("../resources/scenes/043_cornell_normals/statex_00001.xml");
+  //app->LoadScene("../resources/scenes/buggy/Buggy.gltf");
   //app->LoadScene("../resources/scenes/box/Box.gltf");
   //app->LoadScene("../resources/scenes/metal_rough_spheres/MetalRoughSpheres.gltf");
+  //app->LoadScene("../resources/scenes/big_scene/Sponza.bin")l
 
   bool showGUI = true;
   mainLoop(app, window, showGUI);

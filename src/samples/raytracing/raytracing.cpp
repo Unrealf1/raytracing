@@ -102,14 +102,14 @@ float3 RayTracer::calc_light_impact(
 ) {
     float3 result_color(0.0f, 0.0f, 0.0f);
     float k = std::max(dot(dir_to_light, normal), 0.0f);
-    if (k <= 0.0f || true) {
+    if (k <= 0.0f) {
         result_color += base_color * light_color * ambient * 5.0f;
         return result_color;
     }
     float distance_k = dist_to_light < std::numeric_limits<float>::max() ? 1.0f / (dist_to_light * dist_to_light) : 1.0f;
     result_color += base_color * light_color * (k * distance_k + ambient);
     float blinn_k = powf(dot(reflection_dir, float3(0.0f, 0.0f, 0.0f) - ray_dir), blinn_pow);
-    result_color += LiteMath::float3(1.0f, 1.0f, 1.0f) * specular * blinn_k;
+    result_color += LiteMath::float3(1.0f, 1.0f, 1.0f) * specular * blinn_k * 0;
     return result_color;
 }
 
@@ -132,7 +132,6 @@ float3 DecodeNormal(uint32_t a_data)
 
   return float3(x, y, z);
 }
-
 
 //TODO: test
 float3 RayTracer::get_normal_from_hit(const CRT_Hit& hit) {
@@ -169,10 +168,13 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
     auto normal = LiteMath::to_float4(get_normal_from_hit(hit), 0.0f);
     auto reflection_dir = LiteMath::normalize(LiteMath::reflect(rayDir, normal));
     auto material = get_material_data(hit);
-    //material.metallic = hit.instId % 3 == 0 ? 1.0f : 0.0f;
     auto result_color = LiteMath::float3{0.0f, 0.0f, 0.0f};
-    //auto base_color = destruct_color(m_palette[hit.instId % palette_size]);
-    auto base_color = LiteMath::float3(material.baseColor[0],material.baseColor[1],material.baseColor[2]);
+    auto base_color = destruct_color(m_palette[hit.instId % palette_size]);
+    int glass_id = 2;
+    bool is_glass = hit.instId == glass_id;
+    float refraction = is_glass ? 0.9f : 0.01f;
+    material.metallic = random_double(); //hit.instId % 3 == 0 ? 1.0f : 0.0f;
+    //auto base_color = LiteMath::float3(material.baseColor[0],material.baseColor[1],material.baseColor[2]);
     LiteMath::float3 hit_point = to_float3(rayPos) + normalize(to_float3(rayDir)) * hit.t;
 
     if (material.metallic > 0.0f && depth > 0) {
@@ -189,9 +191,10 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
         auto light_position = hit_point + dist_to_light * dir_to_light;
         auto light_hit = m_pAccelStruct->RayQuery_NearestHit(to_float4(hit_point, 0.0001f), LiteMath::to_float4(dir_to_light, FLT_MAX));
         // dist to directional is always at inf distance
-        if (light_hit.instId == uint32_t(-1) || light_hit.t >= dist_to_light) {
+        if (light_hit.instId == uint32_t(-1) || light_hit.t >= dist_to_light || light_hit.instId == glass_id) {
+            float k = light_hit.instId == glass_id ? refraction : 1.0f;
             auto light_color = light->getColor();
-            result_color += calc_light_impact(
+            result_color += k * calc_light_impact(
                 dir_to_light, 
                 dist_to_light, 
                 to_float3(reflection_dir), 
@@ -221,14 +224,11 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
     additional_diffuse /= diffuse_spread;
     //result_color += additional_diffuse;
     */
-    /*
-
-    if (hit.material.refraction > 0)
-    {
-      Ray refrRay = refract(ray, hit);
-      color += hit.material.refraction*RayTrace(refrRay);
-    }*/
-
+    if (is_glass) {
+        result_color *= (1-refraction);
+        float3 refracted = refract(to_float3(rayDir), to_float3(normal), refraction); 
+        result_color += refraction * trace(to_float4(hit_point, 0.0001f), to_float4(refracted, FLT_MAX), background_color, depth - 1, diffuse_spread);
+    }
     return result_color;
 }
 

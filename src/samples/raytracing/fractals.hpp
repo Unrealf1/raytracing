@@ -84,7 +84,7 @@ namespace fractals {
       else return m*0.57735027f;
 
       float k = clamp(0.5*(q.z-q.y+s),0.0,s);
-      return length(vec3(q.x,q.y-s+k,q.z-k));
+      return length(float3(q.x,q.y-s+k,q.z-k));
     }
 
     SDF_base* make_octahedron(float3 oct_pos, float s, material mat) {
@@ -107,5 +107,156 @@ namespace fractals {
     SDF_base* make_repeating(float distance, float3 repetitions, SDF_base* sdf) {
         auto this_sdf = [=](float3 position) { return opRepLim(position, distance, repetitions, sdf); };
         return new SDF<decltype(this_sdf)>( this_sdf, sdf->get_material({0.0f, 0.0f, 0.0f}) );
+    }
+
+    float fractal1( float3 p ) {
+        float x3 = p.x*p.x*p.x;
+        float x2 = p.x*p.x;
+        float x = p.x;
+
+        float y3 = p.y*p.y*p.y;
+        float y2 = p.y*p.y;
+        float y = p.y;
+        
+        float z3 = p.z*p.z*p.z;
+        float z2 = p.z*p.z;
+        float z = p.z;
+
+        float v1 = (x3 - 3*x*y2 - 3*x*z2);
+        float v2 = (y3 - 3*y*x2 - 3*y*z2);
+        float v3 = (z3 - 3*z*x2 - 3*z*y2);
+        float v4 = (x2 + y2 + z2);
+
+        return v1*v1 + v2*v2 + v3*v3 - v4*v4*v4;
+    }
+
+    void sphereFold(float3& z, float& dz) {
+        float r = 1.0f;
+        float minRadius2 = 1.0f;
+        float fixedRadius2 = 1.0f;
+        
+
+        float r2 = dot(z,z);
+        if (r<minRadius2) { 
+            // linear inner scaling
+            float temp = (fixedRadius2/minRadius2);
+            z *= temp;
+            dz*= temp;
+        } else if (r2<fixedRadius2) { 
+            // this is the actual sphere inversion
+            float temp =(fixedRadius2/r2);
+            z *= temp;
+            dz*= temp;
+        }
+    }
+
+    void boxFold(float3& z, float& dz) {
+        float foldingLimit = 10.0f;
+        z = clamp(z, -foldingLimit, foldingLimit) * 2.0 - z;
+    }
+
+    float fractal2 (float3 z) {
+        float3 offset = z;
+        float dr = 1.0;
+        int Iterations = 10;
+        float Scale = 1.0f;
+        for (int n = 0; n < Iterations; n++) {
+            boxFold(z,dr);       // Reflect
+            sphereFold(z,dr);    // Sphere Inversion
+            
+                    z=Scale*z + offset;  // Scale & Translate
+                    dr = dr*abs(Scale)+1.0;
+        }
+        float r = length(z);
+        return r/abs(dr);
+    
+    }
+
+    float fractal3 (float3 pos) {
+        float scale = 1.0f;
+        float DEfactor = scale;
+
+        float fixedRadius = 1.0f;
+        float fR2 = fixedRadius * fixedRadius;
+        float minRadius = 0.5f;
+        float mR2 = minRadius * minRadius;
+
+        float x = pos.x;
+        float y = pos.y;
+        float z = pos.z;
+
+        if (x > 1.0f) x = 2.0f - x;
+        else if (x < -1.0f) x = -2.0f - x;
+        if (y > 1.0f)
+        y = 2.0f - y;
+        else if (y < -1.0f) y = -2.0f - y;
+        if (z > 1.0f)
+        z = 2.0f - z;
+        else if (z < -1.0f) z = -2.0f - z;
+
+        float r2 = x*x + y*y + z*z;
+
+        if (r2 < mR2)
+        {
+           x = x * fR2 / mR2;
+           y = y * fR2 / mR2;
+           z = z * fR2 / mR2;
+           DEfactor = DEfactor * fR2 / mR2;
+        }
+        else if (r2 < fR2)
+        {
+           x = x * fR2 / r2;
+           y = y * fR2 / r2;
+           z = z * fR2 / r2;
+           DEfactor *= fR2 / r2;
+        }
+        
+        float cx = 0.0f;
+        float cy = 0.0f;
+        float cz = 0.0f;
+
+        x = x * scale + cx;
+        y = y * scale + cy;
+        z = z * scale + cz;
+        DEfactor *= scale;
+
+        return sqrt(x*x+y*y+z*z)/abs(DEfactor);
+    }
+
+    float fractal4(float3 p, int iterations = 3) {
+        return sdPyramid( p, 1.0f);
+    }
+
+    float fractal5 (float3 z, int Iterations = 7, float Scale = 1.5f) {
+        float3 a1 = float3(1,1,1);
+        float3 a2 = float3(-1,-1,1);
+        float3 a3 = float3(1,-1,-1);
+        float3 a4 = float3(-1,1,-1);
+        float3 c;
+        int n = 0;
+        float dist, d;
+        while (n < Iterations) {
+             c = a1; dist = length(z-a1);
+             d = length(z-a2); if (d < dist) { c = a2; dist=d; }
+             d = length(z-a3); if (d < dist) { c = a3; dist=d; }
+             d = length(z-a4); if (d < dist) { c = a4; dist=d; }
+            z = Scale*z-c*(Scale-1.0f);
+            n++;
+        }
+
+        return length(z) * pow(Scale, float(-n));
+
+    }
+
+    float DE(float3 z)
+    {
+      z.x = floor(z.x);
+      z.y = floor(z.y);
+      return length(z)-0.3;
+    }
+
+    SDF_base* make_fractal1(material mat) {
+        auto this_sdf = [](float3 position) { return DE(position); };
+        return new SDF<decltype(this_sdf)>( this_sdf, mat );
     }
 }

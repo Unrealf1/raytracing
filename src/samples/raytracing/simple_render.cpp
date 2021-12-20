@@ -498,7 +498,7 @@ void SimpleRender::LoadScene(const char* path)
 //  auto loadedCam = m_pScnMgr->GetCamera(0);
 //  m_cam.fov = loadedCam.fov;
 //  m_cam.pos = float3(loadedCam.pos);
-  m_cam.pos = float3(-45.0f, 85.0f, 80.0f);
+  //m_cam.pos = float3(-45.0f, 85.0f, 80.0f);
 //  m_cam.up  = float3(loadedCam.up);
 //  m_cam.lookAt = float3(loadedCam.lookAt);
 //  m_cam.tdist  = loadedCam.farPlane;
@@ -716,7 +716,7 @@ void SimpleRender::SetupGUIElements()
         for (int i = 0; i < 3; ++i) tracer->m_background_color[i] = background_color[i];
 
         ImGui::SliderInt("Reflection depth", &tracer->m_reflection_depth, 0, 20);
-        ImGui::SliderInt("Diffuse rays", &tracer->m_diffuse_spread, 0, 20);
+        //ImGui::SliderInt("Diffuse rays", &tracer->m_diffuse_spread, 0, 20);
         ImGui::SliderInt("Number of AA rays", &tracer->m_aa_rays, 1, 10);
     }
 
