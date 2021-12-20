@@ -160,7 +160,7 @@ float3 RayTracer::get_normal_from_hit(const CRT_Hit& hit) {
 }
 
 
-float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, int depth) {
+float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, int depth, int diffuse_spread) {
     CRT_Hit hit = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir);
 
     if (hit.instId == uint32_t(-1)) {
@@ -177,7 +177,7 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
     LiteMath::float3 hit_point = to_float3(rayPos) + normalize(to_float3(rayDir)) * hit.t;
 
     if (material.metallic > 0.0f && depth > 0) {
-          result_color += material.metallic * trace(to_float4(hit_point, 0.001f), reflection_dir, background_color, depth - 1);
+          result_color += material.metallic * trace(to_float4(hit_point, 0.0001f), reflection_dir, background_color, depth - 1, diffuse_spread);
     }
 
     if (material.metallic >= 1.0f) {
@@ -188,7 +188,7 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
         auto dir_to_light = light->getDirectionFrom(hit_point);
         auto dist_to_light = light->getDistanceFrom(hit_point);
         auto light_position = hit_point + dist_to_light * dir_to_light;
-        auto light_hit = m_pAccelStruct->RayQuery_NearestHit(to_float4(hit_point, 0.001f), LiteMath::to_float4(dir_to_light, FLT_MAX));
+        auto light_hit = m_pAccelStruct->RayQuery_NearestHit(to_float4(hit_point, 0.0001f), LiteMath::to_float4(dir_to_light, FLT_MAX));
         // dist to directional is always at inf distance
         if (light_hit.instId == uint32_t(-1) || light_hit.t >= dist_to_light) {
             auto light_color = light->getColor();
@@ -204,6 +204,23 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
             );
         } 
     }
+
+    //TODO: test and fix
+    int random1 = depth + diffuse_spread + int(rayPos[1] * 100.0f) + int(rayDir[1] * 100.0f);
+    int random2 = random1 * random1;
+    float3 additional_diffuse = {0.0f, 0.0f, 0.0f};
+    
+    float angle1 = 3.1415f * 2.0f / float(random1 % 100);
+    float angle2 = 3.1415f * 2.0f / float(random2 % 100);
+    for (int i = 0; i < diffuse_spread; ++i) {
+        auto random_dir = normalize(LiteMath::float3(sin(angle1), cos(angle1), sin(angle2)));
+        auto other_color = trace(to_float4(hit_point, 0.0001f), to_float4(random_dir, FLT_MAX), background_color, 0, 0);
+        if ((other_color != background_color)[0] && (other_color != float3{0.0f, 0.0f, 0.0f})[0]) {
+            additional_diffuse += other_color;
+        }
+    }
+    additional_diffuse /= diffuse_spread;
+    //result_color += additional_diffuse;
 
     /*
 
@@ -224,7 +241,7 @@ void RayTracer::kernel_RayTrace(uint32_t tidX, uint32_t tidY, const LiteMath::fl
 
     auto color = m_is_marching ? 
         trace_marching(to_float3(rayPos), to_float3(rayDir), m_background_color, m_marching_steps, m_min_matching_distance, m_reflection_depth) : 
-        trace(rayPos, rayDir, m_background_color, m_reflection_depth);
+        trace(rayPos, rayDir, m_background_color, m_reflection_depth, m_diffuse_spread);
     out_color[tidY * m_width + tidX] = create_color(color[2], color[1], color[0]);
 }
 

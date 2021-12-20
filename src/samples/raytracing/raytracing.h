@@ -26,8 +26,9 @@ public:
 
   float3 m_background_color = {0.15f, 0.15f, 0.15f};
   float m_min_matching_distance = 1.0e-6f;
-  int m_marching_steps = 60;
-  int m_reflection_depth = 4;
+  int m_marching_steps = 50;
+  int m_reflection_depth = 3;
+  int m_diffuse_spread = 3;
   bool m_is_marching = true;
 protected:
   uint32_t m_width;
@@ -54,7 +55,7 @@ protected:
 
   const MaterialData_pbrMR& get_material_data(const CRT_Hit& hit);
   // returns color
-  float3 trace(float4 rayPos, float4 rayDir, float3 background_color, int depth);
+  float3 trace(float4 rayPos, float4 rayDir, float3 background_color, int depth, int diffuse_spread);
   float3 trace_marching(float3 rayPos, float3 rayDir, float3 background_color, int steps, float min_dist, int depth);
   static float3 trace_marching_pos(float3 ray_pos, float3 ray_dir, int steps, float min_dist);
 

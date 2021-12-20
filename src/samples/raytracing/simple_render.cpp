@@ -716,6 +716,7 @@ void SimpleRender::SetupGUIElements()
         for (int i = 0; i < 3; ++i) tracer->m_background_color[i] = background_color[i];
 
         ImGui::SliderInt("Reflection depth", &tracer->m_reflection_depth, 0, 20);
+        ImGui::SliderInt("Diffuse rays", &tracer->m_diffuse_spread, 0, 20);
     }
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
