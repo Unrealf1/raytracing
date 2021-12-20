@@ -699,12 +699,13 @@ void SimpleRender::SetupGUIElements()
     auto ptr = m_light_info.get();
     static_cast<PointLight*>(ptr)->m_position = make_float3(m_uniforms.lightPos.M[0], m_uniforms.lightPos.M[1], m_uniforms.lightPos.M[2]);
 
-    ImGui::SliderFloat("Directional light angle", &m_dir_light_angle, -3.1415f, 3.1415f);
-    ptr = m_light_info2.get();
-    static_cast<DirectionalLight*>(ptr)->m_direction = make_float3(0.0f, sin(m_dir_light_angle), cos(m_dir_light_angle));
 
     auto tracer = m_pRayTracerCPU.get();
     if (tracer) {
+        ImGui::SliderFloat("Directional light angle", &m_dir_light_angle, -3.1415f, 3.1415f);
+        ptr = m_light_info2.get();
+        static_cast<DirectionalLight*>(ptr)->m_direction = make_float3(0.0f, sin(m_dir_light_angle), cos(m_dir_light_angle));
+        
         ImGui::Checkbox("ray marching", &tracer->m_is_marching);
         if (tracer->m_is_marching) {
             ImGui::SliderInt("Max marching steps", &tracer->m_marching_steps, 1, 200);

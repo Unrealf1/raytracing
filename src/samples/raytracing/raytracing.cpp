@@ -103,7 +103,7 @@ float3 RayTracer::calc_light_impact(
     float3 result_color(0.0f, 0.0f, 0.0f);
     float k = std::max(dot(dir_to_light, normal), 0.0f);
     if (k <= 0.0f) {
-        result_color += base_color * light_color * ambient * 5.0f;
+        result_color += base_color * light_color * ambient;
         return result_color;
     }
     float distance_k = dist_to_light < std::numeric_limits<float>::max() ? 1.0f / (dist_to_light * dist_to_light) : 1.0f;
@@ -166,19 +166,24 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
     } 
 
     auto normal = LiteMath::to_float4(get_normal_from_hit(hit), 0.0f);
-    auto reflection_dir = LiteMath::normalize(LiteMath::reflect(rayDir, normal));
+    auto reflection_dir = LiteMath::normalize(LiteMath::reflect(to_float3(rayDir),to_float3(normal)));
     auto material = get_material_data(hit);
     auto result_color = LiteMath::float3{0.0f, 0.0f, 0.0f};
     auto base_color = destruct_color(m_palette[hit.instId % palette_size]);
     int glass_id = 2;
+    int metal_id = 1;
     bool is_glass = hit.instId == glass_id;
+    bool is_metal = hit.instId == metal_id;
     float refraction = is_glass ? 0.9f : 0.01f;
-    material.metallic = random_double(); //hit.instId % 3 == 0 ? 1.0f : 0.0f;
+    if (is_metal) {
+        material.metallic = 1.0f;
+    }
+    //material.metallic = random_double(); //hit.instId % 3 == 0 ? 1.0f : 0.0f;
     //auto base_color = LiteMath::float3(material.baseColor[0],material.baseColor[1],material.baseColor[2]);
     LiteMath::float3 hit_point = to_float3(rayPos) + normalize(to_float3(rayDir)) * hit.t;
 
     if (material.metallic > 0.0f && depth > 0) {
-          result_color += material.metallic * trace(to_float4(hit_point, 0.0001f), reflection_dir, background_color, depth - 1, diffuse_spread);
+          result_color += material.metallic * trace(to_float4(hit_point, 0.0001f), to_float4(reflection_dir, FLT_MAX), background_color, depth - 1, diffuse_spread);
     }
 
     if (material.metallic >= 1.0f) {
@@ -197,7 +202,7 @@ float3 RayTracer::trace(float4 rayPos, float4 rayDir, float3 background_color, i
             result_color += k * calc_light_impact(
                 dir_to_light, 
                 dist_to_light, 
-                to_float3(reflection_dir), 
+                reflection_dir, 
                 to_float3(normal),
                 to_float3(rayDir),
                 base_color,

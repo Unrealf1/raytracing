@@ -45,7 +45,7 @@ int main()
   //app->LoadScene("../resources/scenes/buggy/Buggy.gltf");
   //app->LoadScene("../resources/scenes/box/Box.gltf");
   //app->LoadScene("../resources/scenes/metal_rough_spheres/MetalRoughSpheres.gltf");
-  //app->LoadScene("../resources/scenes/big_scene/Sponza.bin")l
+  //app->LoadScene("../resources/scenes/big_scene/Sponza.gltf");
 
   bool showGUI = true;
   mainLoop(app, window, showGUI);
