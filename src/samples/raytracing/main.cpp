@@ -27,7 +27,7 @@ int main()
 {
   constexpr int WIDTH = 1024;
   constexpr int HEIGHT = 1024;
-  constexpr int VULKAN_DEVICE_ID = 0;
+  constexpr int VULKAN_DEVICE_ID = 1; // on my system this is dedicated GPU
 
   std::shared_ptr<IRender> app = std::make_shared<SimpleRender>(WIDTH, HEIGHT);
 
@@ -41,8 +41,11 @@ int main()
 
   initVulkanGLFW(app, window, VULKAN_DEVICE_ID);
 
-//  app->LoadScene("../resources/scenes/043_cornell_normals/statex_00001.xml");
-  app->LoadScene("../resources/scenes/buggy/Buggy.gltf");
+  app->LoadScene("../resources/scenes/043_cornell_normals/statex_00001.xml");
+  //app->LoadScene("../resources/scenes/buggy/Buggy.gltf");
+  //app->LoadScene("../resources/scenes/box/Box.gltf");
+  //app->LoadScene("../resources/scenes/metal_rough_spheres/MetalRoughSpheres.gltf");
+  //app->LoadScene("../resources/scenes/big_scene/Sponza.gltf");
 
   bool showGUI = true;
   mainLoop(app, window, showGUI);

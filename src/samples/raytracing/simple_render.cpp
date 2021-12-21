@@ -112,7 +112,7 @@ void SimpleRender::InitVulkan(const char** a_instanceExtensions, uint32_t a_inst
 
   LoaderConfig conf = {};
   conf.load_geometry = true;
-  conf.load_materials = MATERIAL_LOAD_MODE::NONE;
+  conf.load_materials = MATERIAL_LOAD_MODE::MATERIALS_ONLY;
   if(ENABLE_HARDWARE_RT)
   {
     conf.build_acc_structs = true;
@@ -466,6 +466,10 @@ void SimpleRender::UpdateView()
 
 void SimpleRender::LoadScene(const char* path)
 {
+  //TODO: move somewhere else?
+  m_light_info = std::make_unique<PointLight>(float3{1.0f, 1.0f, 1.0f}, float3{0.0f, 0.0f, 0.0f});
+  m_light_info2 = std::make_unique<DirectionalLight>(float3{1.0f, 1.0f, 1.0f}, float3{sin(3.1415f / 4.0f), cos(3.1415f / 4.0f), 0.0f});
+
   m_pScnMgr->LoadScene(path);
   if(ENABLE_HARDWARE_RT)
   {
@@ -494,6 +498,7 @@ void SimpleRender::LoadScene(const char* path)
 //  auto loadedCam = m_pScnMgr->GetCamera(0);
 //  m_cam.fov = loadedCam.fov;
 //  m_cam.pos = float3(loadedCam.pos);
+  //m_cam.pos = float3(-45.0f, 85.0f, 80.0f);
 //  m_cam.up  = float3(loadedCam.up);
 //  m_cam.lookAt = float3(loadedCam.lookAt);
 //  m_cam.tdist  = loadedCam.farPlane;
@@ -691,6 +696,30 @@ void SimpleRender::SetupGUIElements()
 
     ImGui::ColorEdit3("Meshes base color", m_uniforms.baseColor.M, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoInputs);
     ImGui::SliderFloat3("Light source position", m_uniforms.lightPos.M, -10.f, 10.f);
+    auto ptr = m_light_info.get();
+    static_cast<PointLight*>(ptr)->m_position = make_float3(m_uniforms.lightPos.M[0], m_uniforms.lightPos.M[1], m_uniforms.lightPos.M[2]);
+
+
+    auto tracer = m_pRayTracerCPU.get();
+    if (tracer) {
+        ImGui::SliderFloat("Directional light angle", &m_dir_light_angle, -3.1415f, 3.1415f);
+        ptr = m_light_info2.get();
+        static_cast<DirectionalLight*>(ptr)->m_direction = make_float3(0.0f, sin(m_dir_light_angle), cos(m_dir_light_angle));
+        
+        ImGui::Checkbox("ray marching", &tracer->m_is_marching);
+        if (tracer->m_is_marching) {
+            ImGui::SliderInt("Max marching steps", &tracer->m_marching_steps, 1, 200);
+            //ImGui::SliderFloat("Marching min distance", &tracer->m_min_matching_distance, 1.0e-8f, 1.0f);
+        }
+        float background_color[3];
+        for (int i = 0; i < 3; ++i) background_color[i] = tracer->m_background_color[i];
+        ImGui::ColorEdit3("Background color", background_color);
+        for (int i = 0; i < 3; ++i) tracer->m_background_color[i] = background_color[i];
+
+        ImGui::SliderInt("Reflection depth", &tracer->m_reflection_depth, 0, 20);
+        //ImGui::SliderInt("Diffuse rays", &tracer->m_diffuse_spread, 0, 20);
+        ImGui::SliderInt("Number of AA rays", &tracer->m_aa_rays, 1, 10);
+    }
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 

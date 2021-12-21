@@ -33,7 +33,7 @@ enum class BVH_BUILDER_TYPE
 enum class MATERIAL_FORMAT
 {
   METALLIC_ROUGHNESS,
-  // HYDRA_CLASSIC
+  HYDRA_CLASSIC
   // PRINCIPLED
   // etc.
 };
@@ -48,7 +48,7 @@ enum class MATERIAL_LOAD_MODE
 struct LoaderConfig
 {
   bool load_geometry = true;
-  MATERIAL_LOAD_MODE load_materials = MATERIAL_LOAD_MODE::NONE;
+  MATERIAL_LOAD_MODE load_materials = MATERIAL_LOAD_MODE::MATERIALS_ONLY;
   bool build_acc_structs = false;
   bool build_acc_structs_while_loading_scene = false;
   bool instance_matrix_as_vertex_attribute = false;
@@ -59,6 +59,7 @@ struct LoaderConfig
 
 struct SceneManager
 {
+  friend class RayTracer;
   SceneManager(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId,
     std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config = {});
   ~SceneManager();
